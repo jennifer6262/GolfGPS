@@ -10,10 +10,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root {
-    --rose:#E8547A; --rose-lt:#F2789A; --rose-pale:#FAD4E0;
-    --blush:#FDE8EF; --cream:#FFF7F9; --mink:#C4899E;
-    --plum:#7A3A52; --txt:#2E1A23; --sub:#9A6878;
-    --border:#F0C8D8; --white:#FFFFFF;
+    --rose:#E8547A;--rose-lt:#F2789A;--rose-pale:#FAD4E0;
+    --blush:#FDE8EF;--cream:#FFF7F9;--mink:#C4899E;
+    --plum:#7A3A52;--txt:#2E1A23;--sub:#9A6878;
+    --border:#F0C8D8;--white:#FFFFFF;
     --shadow:0 8px 40px rgba(232,84,122,0.13);
     --shadow-sm:0 2px 12px rgba(232,84,122,0.10);
   }
@@ -104,14 +104,14 @@
     </div>
   </header>
   <main>
-    <!-- SCREEN 1 -->
+    <!-- SCREEN 1: 검색 -->
     <div class="screen active" id="s-search">
       <div class="search-hero fu fu1">
         <h2>⛳ 골프장을 검색하세요</h2>
-        <p>골프장 이름 또는 지역을 입력해주세요<br>OpenStreetMap 기반 · 완전 무료</p>
+        <p>골프장 이름 또는 지역을 입력해주세요</p>
         <div class="search-row">
           <input class="search-input" id="search-input" type="text"
-            placeholder="예: 유성 골프장, 제주 핀크스"
+            placeholder="예: 한미르, 유성, 제주 핀크스"
             autocomplete="off" autocorrect="off" spellcheck="false">
           <button class="btn-search" id="btn-search-go">🔍</button>
         </div>
@@ -119,11 +119,10 @@
       <div class="search-results" id="search-results"></div>
       <div class="placeholder fu fu2">
         <div class="ico">🏌️‍♀️</div>
-        <p>골프장을 검색하면<br>지도에서 그린 센터를 직접 찍고<br>내 위치에서 핀까지 거리를 확인해요<br><br>
-        <small style="color:var(--mink);font-size:11px;">📡 OpenStreetMap · Nominatim<br>완전 무료 · API 키 불필요</small></p>
+        <p>골프장을 검색하면<br>지도에서 그린 센터를 직접 찍고<br>내 위치에서 핀까지 거리를 확인해요</p>
       </div>
     </div>
-    <!-- SCREEN 2 -->
+    <!-- SCREEN 2: 지도 -->
     <div class="screen" id="s-map">
       <div class="course-badge fu fu1">
         <div>
@@ -139,7 +138,7 @@
       </div>
       <button class="btn-confirm fu fu3" onclick="confirmPin()">이 위치로 핀 고정하기 ✅</button>
     </div>
-    <!-- SCREEN 3 -->
+    <!-- SCREEN 3: 거리 -->
     <div class="screen" id="s-dist">
       <div class="course-badge fu fu1">
         <div>
@@ -175,13 +174,23 @@
   </main>
 </div>
 <div class="toast" id="toast"></div>
+
 <script>
-let userPos=null,pinLatLng=null,map=null,watchId=null;
-function haversine(la1,lo1,la2,lo2){const R=6371000,r=d=>d*Math.PI/180,dL=r(la2-la1),dO=r(lo2-lo1),a=Math.sin(dL/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dO/2)**2;return R*2*Math.asin(Math.min(1,Math.sqrt(a)))}
-const toYd=m=>Math.round(m*1.09361),toFt=m=>Math.round(m*3.28084);
+const KAKAO_REST_KEY = '86a99593e87882c3a9215cfa4e2a8e43';
+
+let userPos=null, pinLatLng=null, map=null, watchId=null;
+
+function haversine(la1,lo1,la2,lo2){
+  const R=6371000,r=d=>d*Math.PI/180,dL=r(la2-la1),dO=r(lo2-lo1);
+  const a=Math.sin(dL/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dO/2)**2;
+  return R*2*Math.asin(Math.min(1,Math.sqrt(a)));
+}
+const toYd=m=>Math.round(m*1.09361), toFt=m=>Math.round(m*3.28084);
+
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function goSearch(){showScreen('s-search')}
 function goMap(){showScreen('s-map')}
+
 function startGPS(){
   if(watchId||!navigator.geolocation)return;
   setGPS('waiting','연결 중...');
@@ -196,7 +205,7 @@ function forceUpdate(){
   navigator.geolocation.getCurrentPosition(pos=>{
     userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
     document.getElementById('accuracy-val').textContent='±'+Math.round(pos.coords.accuracy)+'m';
-    updateDist();showToast('위치를 업데이트했습니다');
+    updateDist(); showToast('위치를 업데이트했습니다');
   },()=>showToast('위치 업데이트에 실패했습니다'),{enableHighAccuracy:true,timeout:10000});
 }
 function setGPS(state,text){
@@ -204,6 +213,8 @@ function setGPS(state,text){
   dot.className='dot'+(state==='active'?' active':state==='error'?' error':'');
   document.getElementById('gps-status').textContent=text;
 }
+
+/* 카카오 로컬 API로 골프장 검색 */
 async function searchCourse(){
   const kw=document.getElementById('search-input').value.trim();
   if(!kw){showToast('골프장 이름을 입력해주세요');return}
@@ -211,29 +222,46 @@ async function searchCourse(){
   box.innerHTML='<div class="result-loading"><div class="spinner"></div> 검색 중...</div>';
   box.classList.add('show');
   try{
-    const url='https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(kw+' 골프')+'&countrycodes=kr&format=json&limit=8&addressdetails=1&accept-language=ko';
-    const res=await fetch(url,{headers:{'Accept-Language':'ko'}});
+    const url='https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kw+' 골프')+'&size=10&category_group_code=CT1';
+    const res=await fetch(url,{headers:{Authorization:'KakaoAK '+KAKAO_REST_KEY}});
     const data=await res.json();
-    if(!data.length){box.innerHTML='<div class="result-empty">검색 결과가 없어요.<br>다른 이름으로 시도해보세요.</div>';return}
-    box._data=data;
-    box.innerHTML=data.map((p,i)=>{
-      const name=p.namedetails&&p.namedetails.name?p.namedetails.name:p.display_name.split(',')[0];
-      const addr=p.display_name.split(',').slice(1,3).join(', ').trim();
-      return '<div class="result-item" onclick="selectCourse('+i+')"><div class="r-name">'+name+'</div><div class="r-addr">'+addr+'</div></div>';
-    }).join('');
-  }catch(e){box.innerHTML='<div class="result-empty">검색 실패. 인터넷 연결을 확인해주세요.</div>'}
+    const list=data.documents||[];
+    if(!list.length){
+      // 카테고리 없이 재검색
+      const res2=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kw)+'&size=10',{headers:{Authorization:'KakaoAK '+KAKAO_REST_KEY}});
+      const data2=await res2.json();
+      const list2=(data2.documents||[]).filter(p=>p.place_name.includes('골프')||p.category_name.includes('골프'));
+      if(!list2.length){box.innerHTML='<div class="result-empty">검색 결과가 없어요.<br>다른 이름으로 시도해보세요.</div>';return}
+      box._data=list2;
+      renderResults(box,list2);return;
+    }
+    box._data=list;
+    renderResults(box,list);
+  }catch(e){
+    box.innerHTML='<div class="result-empty">검색 실패. 인터넷 연결을 확인해주세요.</div>';
+  }
 }
+
+function renderResults(box,list){
+  box.innerHTML=list.map((p,i)=>`
+    <div class="result-item" onclick="selectCourse(${i})">
+      <div class="r-name">${p.place_name}</div>
+      <div class="r-addr">${p.road_address_name||p.address_name}</div>
+    </div>`).join('');
+}
+
 function selectCourse(i){
   const box=document.getElementById('search-results'),p=box._data[i];
-  const name=p.namedetails&&p.namedetails.name?p.namedetails.name:p.display_name.split(',')[0];
-  const addr=p.display_name.split(',').slice(1,3).join(', ').trim();
-  ['badge-name','dist-name'].forEach(id=>document.getElementById(id).textContent=name);
+  ['badge-name','dist-name'].forEach(id=>document.getElementById(id).textContent=p.place_name);
+  const addr=p.road_address_name||p.address_name;
   ['badge-addr','dist-addr'].forEach(id=>document.getElementById(id).textContent=addr);
   box.classList.remove('show');
   showScreen('s-map');
-  loadMap(parseFloat(p.lat),parseFloat(p.lon));
+  loadMap(parseFloat(p.y),parseFloat(p.x));
   startGPS();
 }
+
+/* Leaflet + OpenStreetMap */
 function loadMap(lat,lng){
   if(map){map.setView([lat,lng],17);return}
   map=L.map('osm-map',{center:[lat,lng],zoom:17,zoomControl:true,attributionControl:true});
@@ -242,6 +270,7 @@ function loadMap(lat,lng){
     maxZoom:19
   }).addTo(map);
 }
+
 function confirmPin(){
   if(!map){showToast('지도를 불러오는 중입니다');return}
   const c=map.getCenter();
@@ -250,6 +279,7 @@ function confirmPin(){
   if(userPos)updateDist();
   else showToast('GPS 신호를 기다리는 중이에요. 잠시 후 자동으로 표시됩니다.');
 }
+
 function updateDist(){
   if(!pinLatLng||!userPos)return;
   const m=haversine(userPos.lat,userPos.lng,pinLatLng.lat,pinLatLng.lng);
@@ -262,8 +292,10 @@ function updateDist(){
     el.style.opacity='1';
   },200);
 }
+
 document.getElementById('btn-search-go').addEventListener('click',searchCourse);
 document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Enter')searchCourse()});
+
 let _tt;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3200)}
 </script>
