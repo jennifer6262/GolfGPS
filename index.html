@@ -8,6 +8,7 @@
 <title>PinPoint · 골프 거리측정</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Noto+Sans+KR:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=594013998fcbe5d185c00dc5ec47a023"></script>
 <style>
 :root{
   --rose:#E8547A;--rose-lt:#F2789A;--rose-pale:#FAD4E0;
@@ -109,19 +110,16 @@ main::-webkit-scrollbar{display:none}
   font-family:'Noto Sans KR',sans-serif;flex-shrink:0;font-weight:600;
 }
 
-/* 카카오맵 iframe */
+/* 카카오맵 */
 .mapwrap{
   border-radius:20px;overflow:hidden;box-shadow:var(--sh);
-  position:relative;border:1px solid var(--border);background:#e8f0e8;
+  position:relative;border:1px solid var(--border);
 }
-#kmap{
-  width:100%;height:calc(100vw - 32px);max-height:360px;
-  display:block;border:none;
-}
+#kakao-map{width:100%;height:calc(100vw - 32px);max-height:360px;display:block}
 .pinc{
   position:absolute;top:50%;left:50%;
   transform:translate(-50%,-100%);
-  font-size:34px;pointer-events:none;
+  font-size:36px;pointer-events:none;
   filter:drop-shadow(0 3px 8px rgba(0,0,0,.35));z-index:10;
 }
 .map-tip{
@@ -141,26 +139,7 @@ main::-webkit-scrollbar{display:none}
 }
 .mtab.on{background:var(--plum);color:#fff;border-color:var(--plum)}
 
-/* 핀 고정 안내 */
-.pin-guide{
-  background:var(--blush);border-radius:14px;padding:14px 18px;
-  border:1px solid var(--rose-pale);
-  display:flex;align-items:flex-start;gap:10px;
-}
-.pin-guide .ico{font-size:20px;flex-shrink:0;margin-top:1px}
-.pin-guide p{font-size:12px;color:var(--plum);line-height:1.6}
-.pin-guide strong{font-weight:600}
-
-/* 좌표 입력 */
-.coord-row{display:flex;gap:8px;align-items:center}
-.coord-label{font-size:12px;color:var(--sub);white-space:nowrap;font-weight:500}
-.coord-input{
-  flex:1;padding:12px 14px;border-radius:12px;
-  border:1.5px solid var(--border);background:var(--white);
-  font-size:14px;font-family:'DM Mono',monospace;color:var(--plum);outline:none;
-}
-.coord-input:focus{border-color:var(--rose)}
-
+/* 버튼 */
 .cfmbtn{
   background:linear-gradient(135deg,var(--rose),var(--rose-lt));
   color:#fff;border:none;border-radius:16px;padding:17px;font-size:16px;font-weight:600;
@@ -242,29 +221,16 @@ main::-webkit-scrollbar{display:none}
         <div><div class="cn" id="cname">—</div><div class="ca" id="caddr">—</div></div>
         <button class="chbtn" onclick="go(1)">골프장 변경</button>
       </div>
-
-      <!-- 카카오맵 iframe -->
       <div class="mapwrap fu fu2">
-        <iframe id="kmap" src="" allowfullscreen></iframe>
-        <div class="pinc" id="pinc">📍</div>
-        <div class="map-tip">지도에서 홀 번호 확인 후 아래에 좌표를 입력하세요</div>
+        <div id="kakao-map"></div>
+        <div class="pinc">📍</div>
+        <div class="map-tip">지도 드래그 → 📍를 그린에 맞추세요</div>
       </div>
-
-      <!-- 지도 타입 탭 -->
       <div class="maptabs fu fu3">
-        <button class="mtab on" id="tab-normal" onclick="setMapType('roadmap')">🗺️ 일반지도</button>
-        <button class="mtab" id="tab-sky" onclick="setMapType('skyview')">🛰️ 위성지도</button>
+        <button class="mtab on" id="tab-road" onclick="setMapType('ROADMAP')">🗺️ 일반 (홀번호)</button>
+        <button class="mtab" id="tab-sky" onclick="setMapType('SKYVIEW')">🛰️ 위성</button>
       </div>
-
-      <!-- 핀 고정 안내 -->
-      <div class="pin-guide fu fu3">
-        <div class="ico">💡</div>
-        <p>위 카카오맵에서 <strong>그린 센터 위치</strong>를 찾은 뒤,<br>
-        해당 지점을 <strong>꾹 눌러</strong> 좌표를 확인하고<br>
-        아래에 입력하거나, 지도 중앙(📍)을 그린에 맞춰 <strong>"핀 고정"</strong> 버튼을 누르세요.</p>
-      </div>
-
-      <button class="cfmbtn fu fu4" onclick="confirmPinCenter()">📍 지도 중심으로 핀 고정하기</button>
+      <button class="cfmbtn fu fu4" onclick="confirmPin()">📍 이 위치로 핀 고정하기</button>
     </div>
 
     <!-- SCREEN 3: 거리 측정 -->
@@ -353,10 +319,10 @@ const DB=[
 ];
 const REGIONS=["전체","대전·충청","서울·경기","강원","경상","전라","제주"];
 
-let uPos=null,pin=null,wid=null,curRegion=null;
-let curLat=null,curLng=null,mapType='roadmap';
+let uPos=null, pin=null, wid=null, curRegion=null;
+let kakaoMap=null, curMapType='ROADMAP';
 
-const yd=m=>Math.round(m*1.09361),ft=m=>Math.round(m*3.28084);
+const yd=m=>Math.round(m*1.09361), ft=m=>Math.round(m*3.28084);
 function hav(a,b,c,d){
   const R=6371000,r=x=>x*Math.PI/180,dL=r(c-a),dO=r(d-b);
   const q=Math.sin(dL/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dO/2)**2;
@@ -366,6 +332,7 @@ function hav(a,b,c,d){
 function go(n){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s'+n).classList.add('active');
+  if(n===2 && kakaoMap) setTimeout(()=>kakaoMap.relayout(),100);
 }
 
 // GPS
@@ -383,7 +350,7 @@ function refresh(){
   navigator.geolocation.getCurrentPosition(p=>{
     uPos={lat:p.coords.latitude,lng:p.coords.longitude};
     document.getElementById('acc').textContent='±'+Math.round(p.coords.accuracy)+'m';
-    drawDist();toast('위치를 업데이트했습니다');
+    drawDist(); toast('위치를 업데이트했습니다');
   },()=>toast('위치 업데이트 실패'),{enableHighAccuracy:true,timeout:10000});
 }
 function setDot(s,t){
@@ -417,9 +384,14 @@ function showList(region,kw){
   if(region)list=list.filter(c=>c.r===region);
   if(kw&&kw.trim())list=list.filter(c=>c.n.includes(kw.trim())||c.a.includes(kw.trim()));
   box.style.display='block';
-  if(!list.length){box.innerHTML='<div class="empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';return}
+  if(!list.length){
+    box.innerHTML='<div class="empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
+    return;
+  }
   box._d=list;
-  box.innerHTML=list.map((c,i)=>'<div class="ri" onclick="pick('+i+')"><div class="rn">'+c.n+'</div><div class="ra">'+c.a+'</div></div>').join('');
+  box.innerHTML=list.map((c,i)=>
+    '<div class="ri" onclick="pick('+i+')"><div class="rn">'+c.n+'</div><div class="ra">'+c.a+'</div></div>'
+  ).join('');
 }
 
 function doSearch(){
@@ -427,44 +399,49 @@ function doSearch(){
   if(!kw.trim()){toast('골프장 이름을 입력해주세요');return}
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   document.querySelector('.chip').classList.add('on');
-  curRegion=null;showList(null,kw);
+  curRegion=null; showList(null,kw);
 }
 
 function pick(i){
   const c=document.getElementById('results')._d[i];
   ['cname','dname'].forEach(id=>document.getElementById(id).textContent=c.n);
   ['caddr','daddr'].forEach(id=>document.getElementById(id).textContent=c.a);
-  curLat=c.lat; curLng=c.lng;
   go(2);
-  loadKakaoMap(c.lat,c.lng,mapType);
+  initKakaoMap(c.lat,c.lng);
   startGPS();
 }
 
-// 카카오맵 iframe 로드
-// 카카오맵 공유 URL: 홀 번호 포함 일반지도 표시
-function loadKakaoMap(lat,lng,type){
-  const zoom=4; // 카카오맵 줌 레벨 (1~14, 낮을수록 확대)
-  // 카카오맵 지도 embed URL
-  const url='https://map.kakao.com/link/map/골프장,'+lat+','+lng;
-  // roadmap: 일반(홀번호 표시), skyview: 위성
-  const embedUrl='https://map.kakao.com/?map_type='+(type==='skyview'?'SKYVIEW':'ROADMAP')
-    +'&center='+lng+','+lat+'&level='+zoom+'&marker='+lng+','+lat;
-  document.getElementById('kmap').src=embedUrl;
+// ── 카카오맵 JavaScript API
+function initKakaoMap(lat,lng){
+  const container=document.getElementById('kakao-map');
+  const options={
+    center:new kakao.maps.LatLng(lat,lng),
+    level:3, // 낮을수록 확대 (골프 그린 보이는 레벨)
+    mapTypeId:kakao.maps.MapTypeId[curMapType]
+  };
+  if(kakaoMap){
+    kakaoMap.setCenter(new kakao.maps.LatLng(lat,lng));
+    kakaoMap.setLevel(3);
+    return;
+  }
+  kakaoMap=new kakao.maps.Map(container,options);
+  kakaoMap.setMapTypeId(kakao.maps.MapTypeId[curMapType]);
 }
 
 function setMapType(type){
-  mapType=type;
-  document.getElementById('tab-normal').classList.toggle('on',type==='roadmap');
-  document.getElementById('tab-sky').classList.toggle('on',type==='skyview');
-  if(curLat)loadKakaoMap(curLat,curLng,type);
+  curMapType=type;
+  document.getElementById('tab-road').classList.toggle('on',type==='ROADMAP');
+  document.getElementById('tab-sky').classList.toggle('on',type==='SKYVIEW');
+  if(kakaoMap) kakaoMap.setMapTypeId(kakao.maps.MapTypeId[type]);
 }
 
-// 지도 중심(골프장 등록 좌표)으로 핀 고정
-function confirmPinCenter(){
-  if(!curLat){toast('골프장을 먼저 선택해주세요');return}
-  pin={lat:curLat,lng:curLng};
+// 지도 중심 좌표로 핀 고정
+function confirmPin(){
+  if(!kakaoMap){toast('지도를 불러오는 중입니다');return}
+  const c=kakaoMap.getCenter();
+  pin={lat:c.getLat(),lng:c.getLng()};
   go(3);
-  if(uPos)drawDist();
+  if(uPos) drawDist();
   else toast('GPS 신호를 기다리는 중이에요');
 }
 
@@ -481,13 +458,15 @@ function drawDist(){
   },200);
 }
 
-document.getElementById('kw').addEventListener('keydown',e=>{if(e.key==='Enter'){e.target.blur();doSearch()}});
+document.getElementById('kw').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.target.blur();doSearch()}
+});
 
 let _t;
 function toast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_t); _t=setTimeout(()=>t.classList.remove('show'),3200);
 }
 </script>
 </body>
