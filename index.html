@@ -181,6 +181,12 @@ main::-webkit-scrollbar{display:none}
 .b1{background:var(--blush);color:var(--rose);border:1.5px solid var(--rose-pale)}
 .b2{background:var(--blush);color:var(--plum);border:1.5px solid var(--border)}
 .b1:active,.b2:active{opacity:.8}
+.homebtn{
+  width:100%;padding:14px;border-radius:14px;border:1.5px solid var(--border);
+  background:var(--white);color:var(--sub);font-size:13px;font-weight:600;
+  font-family:'Noto Sans KR',sans-serif;cursor:pointer;transition:background .15s;
+}
+.homebtn:active{background:var(--blush)}
 
 .toast{
   position:fixed;bottom:calc(var(--safe-bot) + 24px);left:50%;transform:translateX(-50%);
@@ -270,6 +276,7 @@ footer a:hover{text-decoration:underline}
         <button class="bhalf b1" onclick="go(2)">📍 핀 다시 찍기</button>
         <button class="bhalf b2" onclick="refresh()">🔄 위치 새로고침</button>
       </div>
+      <button class="homebtn fu fu4" onclick="go(1)">🏠 골프장 변경 / 홈으로</button>
     </div>
 
   </main>
