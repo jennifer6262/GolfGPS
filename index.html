@@ -269,13 +269,16 @@ function renderList(region,kw){
   const ph=document.getElementById('placeholder-box');
   let list=COURSES;
   if(region)list=list.filter(c=>c.r===region);
-  if(kw)list=list.filter(c=>c.n.includes(kw)||c.a.includes(kw)||c.r.includes(kw));
+  if(kw){
+    const k=kw.trim();
+    list=list.filter(c=>c.n.includes(k)||c.a.includes(k)||c.r.includes(k));
+  }
   if(!list.length){
     box.innerHTML='<div class="result-empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
     box.classList.add('show');ph.style.display='none';return;
   }
   box._data=list;
-  box.innerHTML=list.slice(0,12).map((c,i)=>`
+  box.innerHTML=list.map((c,i)=>`
     <div class="result-item" onclick="selectCourse(${i})">
       <div class="r-name">${c.n}</div>
       <div class="r-addr">${c.a}</div>
