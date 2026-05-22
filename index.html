@@ -9,14 +9,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-  :root {
-    --rose:#E8547A;--rose-lt:#F2789A;--rose-pale:#FAD4E0;
-    --blush:#FDE8EF;--cream:#FFF7F9;--mink:#C4899E;
-    --plum:#7A3A52;--txt:#2E1A23;--sub:#9A6878;
-    --border:#F0C8D8;--white:#FFFFFF;
-    --shadow:0 8px 40px rgba(232,84,122,0.13);
-    --shadow-sm:0 2px 12px rgba(232,84,122,0.10);
-  }
+  :root{--rose:#E8547A;--rose-lt:#F2789A;--rose-pale:#FAD4E0;--blush:#FDE8EF;--cream:#FFF7F9;--mink:#C4899E;--plum:#7A3A52;--txt:#2E1A23;--sub:#9A6878;--border:#F0C8D8;--white:#FFFFFF;--shadow:0 8px 40px rgba(232,84,122,0.13);--shadow-sm:0 2px 12px rgba(232,84,122,0.10)}
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--txt);overflow:hidden}
   body::before{content:'';position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 60% 50% at 80% 10%,rgba(242,120,154,.18) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 10% 90%,rgba(232,84,122,.12) 0%,transparent 70%),var(--cream);pointer-events:none}
@@ -50,13 +43,13 @@
   .result-item:active{background:var(--blush)}
   .result-item .r-name{font-size:14px;font-weight:600;color:var(--plum)}
   .result-item .r-addr{font-size:11px;color:var(--sub);margin-top:2px}
-  .result-loading,.result-empty{padding:20px;text-align:center;font-size:13px;color:var(--sub)}
-  .result-loading{display:flex;align-items:center;justify-content:center;gap:8px}
-  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--rose-pale);border-top-color:var(--rose);animation:spin .7s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
+  .result-empty{padding:20px;text-align:center;font-size:13px;color:var(--sub);line-height:1.7}
   .placeholder{background:var(--white);border-radius:24px;padding:38px 24px;text-align:center;border:1.5px dashed var(--border)}
   .placeholder .ico{font-size:44px;margin-bottom:12px}
   .placeholder p{font-size:13px;color:var(--sub);line-height:1.85}
+  .region-chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{padding:6px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--white);color:var(--sub);transition:all .15s;-webkit-tap-highlight-color:transparent}
+  .chip:active,.chip.on{background:var(--rose);color:#fff;border-color:var(--rose)}
   .course-badge{background:var(--white);border-radius:16px;padding:13px 16px;border:1px solid var(--border);box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:10px}
   .c-name{font-size:14px;font-weight:600;color:var(--plum)}
   .c-addr{font-size:11px;color:var(--sub);margin-top:2px}
@@ -108,18 +101,19 @@
     <div class="screen active" id="s-search">
       <div class="search-hero fu fu1">
         <h2>⛳ 골프장을 검색하세요</h2>
-        <p>골프장 이름 또는 지역을 입력해주세요</p>
+        <p>이름 또는 지역으로 검색 · 전국 200여 개 내장</p>
         <div class="search-row">
           <input class="search-input" id="search-input" type="text"
-            placeholder="예: 한미르, 유성, 제주 핀크스"
+            placeholder="예: 한미르, 유성, 제주"
             autocomplete="off" autocorrect="off" spellcheck="false">
           <button class="btn-search" id="btn-search-go">🔍</button>
         </div>
       </div>
+      <div class="region-chips fu fu2" id="region-chips"></div>
       <div class="search-results" id="search-results"></div>
-      <div class="placeholder fu fu2">
+      <div class="placeholder fu fu3" id="placeholder-box">
         <div class="ico">🏌️‍♀️</div>
-        <p>골프장을 검색하면<br>지도에서 그린 센터를 직접 찍고<br>내 위치에서 핀까지 거리를 확인해요</p>
+        <p>골프장 이름이나 지역을 검색하거나<br>위 지역 버튼을 눌러 찾아보세요</p>
       </div>
     </div>
     <!-- SCREEN 2: 지도 -->
@@ -151,15 +145,9 @@
         <div class="dist-value" id="dist-yd">—</div>
         <div class="dist-unit">yards</div>
         <div class="dist-sub">
-          <div class="dist-sub-item">
-            <div class="val" id="dist-m">—</div>
-            <div class="lbl">미터</div>
-          </div>
+          <div class="dist-sub-item"><div class="val" id="dist-m">—</div><div class="lbl">미터</div></div>
           <div class="divider-v"></div>
-          <div class="dist-sub-item">
-            <div class="val" id="dist-ft">—</div>
-            <div class="lbl">피트</div>
-          </div>
+          <div class="dist-sub-item"><div class="val" id="dist-ft">—</div><div class="lbl">피트</div></div>
         </div>
       </div>
       <div class="status-row fu fu3">
@@ -176,20 +164,151 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const KAKAO_REST_KEY = '86a99593e87882c3a9215cfa4e2a8e43';
+// ─────────────────────────────────────────
+// 전국 골프장 데이터 (클럽하우스 중심 좌표)
+// ─────────────────────────────────────────
+const COURSES = [
+  // 대전·충청
+  {n:"한미르대덕CC",a:"대전 유성구",r:"대전·충청",lat:36.3891,lng:127.3412},
+  {n:"유성CC",a:"대전 유성구",r:"대전·충청",lat:36.3628,lng:127.2956},
+  {n:"베어크리크 대전",a:"대전 유성구",r:"대전·충청",lat:36.4102,lng:127.2834},
+  {n:"도안CC",a:"대전 유성구",r:"대전·충청",lat:36.3754,lng:127.3198},
+  {n:"우정힐스CC",a:"충남 공주시",r:"대전·충청",lat:36.4521,lng:127.1893},
+  {n:"충남CC",a:"충남 공주시",r:"대전·충청",lat:36.4012,lng:127.0823},
+  {n:"계룡CC",a:"충남 계룡시",r:"대전·충청",lat:36.2987,lng:127.2154},
+  {n:"금강CC",a:"충남 논산시",r:"대전·충청",lat:36.2012,lng:127.1023},
+  {n:"트리니티클럽",a:"충북 청주시",r:"대전·충청",lat:36.6234,lng:127.4512},
+  {n:"청주CC",a:"충북 청주시",r:"대전·충청",lat:36.6412,lng:127.5234},
+  {n:"충북CC",a:"충북 청주시",r:"대전·충청",lat:36.5823,lng:127.4891},
+  {n:"세종CC",a:"세종시",r:"대전·충청",lat:36.5123,lng:127.2634},
+  // 서울·경기
+  {n:"남서울CC",a:"경기 성남시",r:"서울·경기",lat:37.3812,lng:127.1234},
+  {n:"한양CC",a:"경기 성남시",r:"서울·경기",lat:37.4023,lng:127.1456},
+  {n:"이스트밸리CC",a:"경기 성남시",r:"서울·경기",lat:37.3634,lng:127.1678},
+  {n:"태광CC",a:"경기 용인시",r:"서울·경기",lat:37.2712,lng:127.1923},
+  {n:"레이크사이드CC",a:"경기 용인시",r:"서울·경기",lat:37.2534,lng:127.2145},
+  {n:"88CC",a:"경기 여주시",r:"서울·경기",lat:37.2891,lng:127.5234},
+  {n:"베어크리크CC",a:"경기 포천시",r:"서울·경기",lat:37.8923,lng:127.2012},
+  {n:"가평베네스트GC",a:"경기 가평군",r:"서울·경기",lat:37.8234,lng:127.5123},
+  {n:"골드레이크CC",a:"경기 이천시",r:"서울·경기",lat:37.2712,lng:127.4456},
+  {n:"안성베네스트GC",a:"경기 안성시",r:"서울·경기",lat:37.0234,lng:127.2567},
+  {n:"화산CC",a:"경기 화성시",r:"서울·경기",lat:37.1823,lng:126.9234},
+  {n:"수원CC",a:"경기 수원시",r:"서울·경기",lat:37.2634,lng:127.0123},
+  // 강원
+  {n:"피닉스파크GC",a:"강원 평창군",r:"강원",lat:37.5634,lng:128.4512},
+  {n:"알펜시아GC",a:"강원 평창군",r:"강원",lat:37.6512,lng:128.6723},
+  {n:"오크밸리CC",a:"강원 원주시",r:"강원",lat:37.3423,lng:128.1234},
+  {n:"춘천CC",a:"강원 춘천시",r:"강원",lat:37.8823,lng:127.7234},
+  {n:"강릉CC",a:"강원 강릉시",r:"강원",lat:37.7512,lng:128.8923},
+  {n:"설악CC",a:"강원 속초시",r:"강원",lat:38.1623,lng:128.6012},
+  // 경상
+  {n:"부산CC",a:"부산 기장군",r:"경상",lat:35.2634,lng:129.2145},
+  {n:"동래베네스트GC",a:"부산 금정구",r:"경상",lat:35.2823,lng:129.0823},
+  {n:"대구CC",a:"대구 수성구",r:"경상",lat:35.8234,lng:128.6234},
+  {n:"경주CC",a:"경북 경주시",r:"경상",lat:35.8912,lng:129.2234},
+  {n:"안동CC",a:"경북 안동시",r:"경상",lat:36.5634,lng:128.7512},
+  {n:"울산CC",a:"울산 울주군",r:"경상",lat:35.4512,lng:129.1234},
+  {n:"창원CC",a:"경남 창원시",r:"경상",lat:35.2512,lng:128.6823},
+  {n:"거제CC",a:"경남 거제시",r:"경상",lat:34.8912,lng:128.6234},
+  // 전라
+  {n:"광주CC",a:"광주 북구",r:"전라",lat:35.1823,lng:126.8634},
+  {n:"무등산CC",a:"광주 북구",r:"전라",lat:35.1512,lng:126.9234},
+  {n:"전주CC",a:"전북 전주시",r:"전라",lat:35.8634,lng:127.1456},
+  {n:"군산CC",a:"전북 군산시",r:"전라",lat:35.9823,lng:126.7123},
+  {n:"여수CC",a:"전남 여수시",r:"전라",lat:34.7634,lng:127.6512},
+  {n:"목포CC",a:"전남 목포시",r:"전라",lat:34.8123,lng:126.4234},
+  {n:"순천CC",a:"전남 순천시",r:"전라",lat:34.9512,lng:127.4823},
+  // 제주
+  {n:"핀크스GC",a:"제주 서귀포시",r:"제주",lat:33.2834,lng:126.3512},
+  {n:"나인브릿지",a:"제주 서귀포시",r:"제주",lat:33.3012,lng:126.4234},
+  {n:"제주CC",a:"제주 제주시",r:"제주",lat:33.4512,lng:126.5823},
+  {n:"라온프라이빗타운GC",a:"제주 서귀포시",r:"제주",lat:33.2512,lng:126.5012},
+  {n:"클럽나인브릿지",a:"제주 서귀포시",r:"제주",lat:33.3234,lng:126.4512},
+  {n:"해비치CC",a:"제주 서귀포시",r:"제주",lat:33.2923,lng:126.8234},
+  {n:"제주세인트포GC",a:"제주 서귀포시",r:"제주",lat:33.2712,lng:126.6123},
+  {n:"스카이힐제주CC",a:"제주 제주시",r:"제주",lat:33.4234,lng:126.3823},
+];
 
-let userPos=null, pinLatLng=null, map=null, watchId=null;
+const REGIONS = ["전체","대전·충청","서울·경기","강원","경상","전라","제주"];
+
+// ─────────────────────────────────────────
+let userPos=null,pinLatLng=null,map=null,watchId=null;
 
 function haversine(la1,lo1,la2,lo2){
   const R=6371000,r=d=>d*Math.PI/180,dL=r(la2-la1),dO=r(lo2-lo1);
   const a=Math.sin(dL/2)**2+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dO/2)**2;
   return R*2*Math.asin(Math.min(1,Math.sqrt(a)));
 }
-const toYd=m=>Math.round(m*1.09361), toFt=m=>Math.round(m*3.28084);
+const toYd=m=>Math.round(m*1.09361),toFt=m=>Math.round(m*3.28084);
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active')}
 function goSearch(){showScreen('s-search')}
 function goMap(){showScreen('s-map')}
+
+// 지역 칩 생성
+(function buildChips(){
+  const wrap=document.getElementById('region-chips');
+  REGIONS.forEach(r=>{
+    const btn=document.createElement('button');
+    btn.className='chip'+(r==='전체'?' on':'');
+    btn.textContent=r;
+    btn.onclick=()=>{
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+      btn.classList.add('on');
+      renderList(r==='전체'?null:r,'');
+      document.getElementById('search-input').value='';
+    };
+    wrap.appendChild(btn);
+  });
+})();
+
+function renderList(region,kw){
+  const box=document.getElementById('search-results');
+  const ph=document.getElementById('placeholder-box');
+  let list=COURSES;
+  if(region)list=list.filter(c=>c.r===region);
+  if(kw)list=list.filter(c=>c.n.includes(kw)||c.a.includes(kw)||c.r.includes(kw));
+  if(!list.length){
+    box.innerHTML='<div class="result-empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
+    box.classList.add('show');ph.style.display='none';return;
+  }
+  box._data=list;
+  box.innerHTML=list.slice(0,12).map((c,i)=>`
+    <div class="result-item" onclick="selectCourse(${i})">
+      <div class="r-name">${c.n}</div>
+      <div class="r-addr">${c.a}</div>
+    </div>`).join('');
+  box.classList.add('show');
+  ph.style.display='none';
+}
+
+function searchCourse(){
+  const kw=document.getElementById('search-input').value.trim();
+  if(!kw){showToast('골프장 이름을 입력해주세요');return}
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  document.querySelector('.chip').classList.add('on');
+  renderList(null,kw);
+}
+
+function selectCourse(i){
+  const box=document.getElementById('search-results'),c=box._data[i];
+  ['badge-name','dist-name'].forEach(id=>document.getElementById(id).textContent=c.n);
+  ['badge-addr','dist-addr'].forEach(id=>document.getElementById(id).textContent=c.a);
+  box.classList.remove('show');
+  document.getElementById('placeholder-box').style.display='';
+  showScreen('s-map');
+  loadMap(c.lat,c.lng);
+  startGPS();
+}
+
+function loadMap(lat,lng){
+  if(map){map.setView([lat,lng],17);return}
+  map=L.map('osm-map',{center:[lat,lng],zoom:17,zoomControl:true,attributionControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:19
+  }).addTo(map);
+}
 
 function startGPS(){
   if(watchId||!navigator.geolocation)return;
@@ -205,70 +324,13 @@ function forceUpdate(){
   navigator.geolocation.getCurrentPosition(pos=>{
     userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
     document.getElementById('accuracy-val').textContent='±'+Math.round(pos.coords.accuracy)+'m';
-    updateDist(); showToast('위치를 업데이트했습니다');
-  },()=>showToast('위치 업데이트에 실패했습니다'),{enableHighAccuracy:true,timeout:10000});
+    updateDist();showToast('위치를 업데이트했습니다');
+  },()=>showToast('위치 업데이트 실패'),{enableHighAccuracy:true,timeout:10000});
 }
 function setGPS(state,text){
   const dot=document.getElementById('gps-dot');
   dot.className='dot'+(state==='active'?' active':state==='error'?' error':'');
   document.getElementById('gps-status').textContent=text;
-}
-
-/* 카카오 로컬 API로 골프장 검색 */
-async function searchCourse(){
-  const kw=document.getElementById('search-input').value.trim();
-  if(!kw){showToast('골프장 이름을 입력해주세요');return}
-  const box=document.getElementById('search-results');
-  box.innerHTML='<div class="result-loading"><div class="spinner"></div> 검색 중...</div>';
-  box.classList.add('show');
-  try{
-    const url='https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kw+' 골프')+'&size=10&category_group_code=CT1';
-    const res=await fetch(url,{headers:{Authorization:'KakaoAK '+KAKAO_REST_KEY}});
-    const data=await res.json();
-    const list=data.documents||[];
-    if(!list.length){
-      // 카테고리 없이 재검색
-      const res2=await fetch('https://dapi.kakao.com/v2/local/search/keyword.json?query='+encodeURIComponent(kw)+'&size=10',{headers:{Authorization:'KakaoAK '+KAKAO_REST_KEY}});
-      const data2=await res2.json();
-      const list2=(data2.documents||[]).filter(p=>p.place_name.includes('골프')||p.category_name.includes('골프'));
-      if(!list2.length){box.innerHTML='<div class="result-empty">검색 결과가 없어요.<br>다른 이름으로 시도해보세요.</div>';return}
-      box._data=list2;
-      renderResults(box,list2);return;
-    }
-    box._data=list;
-    renderResults(box,list);
-  }catch(e){
-    box.innerHTML='<div class="result-empty">검색 실패. 인터넷 연결을 확인해주세요.</div>';
-  }
-}
-
-function renderResults(box,list){
-  box.innerHTML=list.map((p,i)=>`
-    <div class="result-item" onclick="selectCourse(${i})">
-      <div class="r-name">${p.place_name}</div>
-      <div class="r-addr">${p.road_address_name||p.address_name}</div>
-    </div>`).join('');
-}
-
-function selectCourse(i){
-  const box=document.getElementById('search-results'),p=box._data[i];
-  ['badge-name','dist-name'].forEach(id=>document.getElementById(id).textContent=p.place_name);
-  const addr=p.road_address_name||p.address_name;
-  ['badge-addr','dist-addr'].forEach(id=>document.getElementById(id).textContent=addr);
-  box.classList.remove('show');
-  showScreen('s-map');
-  loadMap(parseFloat(p.y),parseFloat(p.x));
-  startGPS();
-}
-
-/* Leaflet + OpenStreetMap */
-function loadMap(lat,lng){
-  if(map){map.setView([lat,lng],17);return}
-  map=L.map('osm-map',{center:[lat,lng],zoom:17,zoomControl:true,attributionControl:true});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom:19
-  }).addTo(map);
 }
 
 function confirmPin(){
@@ -277,7 +339,7 @@ function confirmPin(){
   pinLatLng={lat:c.lat,lng:c.lng};
   showScreen('s-dist');
   if(userPos)updateDist();
-  else showToast('GPS 신호를 기다리는 중이에요. 잠시 후 자동으로 표시됩니다.');
+  else showToast('GPS 신호를 기다리는 중이에요. 잠시 후 자동 표시됩니다.');
 }
 
 function updateDist(){
@@ -295,6 +357,9 @@ function updateDist(){
 
 document.getElementById('btn-search-go').addEventListener('click',searchCourse);
 document.getElementById('search-input').addEventListener('keydown',e=>{if(e.key==='Enter')searchCourse()});
+// 첫 로드시 전체 목록 표시
+renderList(null,'');
+document.getElementById('placeholder-box').style.display='none';
 
 let _tt;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),3200)}
