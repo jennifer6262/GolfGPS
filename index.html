@@ -189,6 +189,16 @@ main::-webkit-scrollbar{display:none}
 @keyframes fu{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .fu{animation:fu .35s ease both}
 .fu1{animation-delay:.03s}.fu2{animation-delay:.09s}.fu3{animation-delay:.15s}.fu4{animation-delay:.21s}
+
+/* ── 푸터 ── */
+footer{
+  text-align:center;padding:14px 20px calc(var(--safe-bot) + 14px);
+  font-size:11px;color:var(--sub);line-height:1.8;
+  border-top:1px solid var(--border);background:rgba(255,247,249,.7);
+  backdrop-filter:blur(8px);flex-shrink:0;
+}
+footer a{color:var(--mink);text-decoration:none}
+footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -260,6 +270,13 @@ main::-webkit-scrollbar{display:none}
 
   </main>
 </div>
+
+<!-- 카피라이트 -->
+<footer>
+  <p>© 2025 대전이문고 jennifer · PinPoint Golf GPS</p>
+  <p>지도 데이터 © <a href="https://map.kakao.com" target="_blank">Kakao Maps</a> · GPS 거리측정 웹앱</p>
+</footer>
+
 <div class="toast" id="toast"></div>
 
 <script>
