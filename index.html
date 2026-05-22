@@ -8,7 +8,7 @@
 <title>PinPoint · 골프 거리측정</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Noto+Sans+KR:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=76ebcb1469df6b7e62c8a24e9be6cf51"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=76ebcb1469df6b7e62c8a24e9be6cf51&libraries=services"></script>
 <style>
 :root{
   --rose:#E8547A;--rose-lt:#F2789A;--rose-pale:#FAD4E0;
@@ -378,6 +378,7 @@ function setDot(s,t){
   showList(null,null);
 })();
 
+// DB 목록 표시 (지역 칩용)
 function showList(region,kw){
   const box=document.getElementById('results');
   let list=[...DB];
@@ -388,18 +389,35 @@ function showList(region,kw){
     box.innerHTML='<div class="empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
     return;
   }
-  box._d=list;
+  box._d=list.map(c=>({n:c.n,a:c.a,lat:c.lat,lng:c.lng}));
   box.innerHTML=list.map((c,i)=>
     '<div class="ri" onclick="pick('+i+')"><div class="rn">'+c.n+'</div><div class="ra">'+c.a+'</div></div>'
   ).join('');
 }
 
+// 카카오 장소 검색 → 결과 목록 표시
+let ps = null;
 function doSearch(){
-  const kw=document.getElementById('kw').value;
-  if(!kw.trim()){toast('골프장 이름을 입력해주세요');return}
+  const kw=document.getElementById('kw').value.trim();
+  if(!kw){toast('골프장 이름을 입력해주세요');return}
+  // 키워드에 "골프" 없으면 자동 추가
+  const query = kw.includes('골프')||kw.includes('CC')||kw.includes('GC') ? kw : kw+' 골프장';
+  const box=document.getElementById('results');
+  box.style.display='block';
+  box.innerHTML='<div class="empty">🔍 검색 중...</div>';
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   document.querySelector('.chip').classList.add('on');
-  curRegion=null; showList(null,kw);
+  if(!ps) ps=new kakao.maps.services.Places();
+  ps.keywordSearch(query, (data,status)=>{
+    if(status!==kakao.maps.services.Status.OK||!data.length){
+      box.innerHTML='<div class="empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
+      return;
+    }
+    box._d=data.map(p=>({n:p.place_name,a:p.road_address_name||p.address_name,lat:parseFloat(p.y),lng:parseFloat(p.x)}));
+    box.innerHTML=box._d.map((c,i)=>
+      '<div class="ri" onclick="pick('+i+')"><div class="rn">'+c.n+'</div><div class="ra">'+c.a+'</div></div>'
+    ).join('');
+  });
 }
 
 function pick(i){
