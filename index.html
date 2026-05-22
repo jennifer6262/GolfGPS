@@ -95,6 +95,9 @@ main::-webkit-scrollbar{display:none}
 .ri .rn{font-size:14px;font-weight:600;color:var(--plum);line-height:1.3}
 .ri .ra{font-size:11px;color:var(--sub);margin-top:3px}
 .empty{padding:24px;text-align:center;font-size:13px;color:var(--sub);line-height:1.7}
+.list-header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px}
+#list-label{font-size:12px;font-weight:600;color:var(--mink);letter-spacing:.3px}
+.nearby-btn{font-size:11px;color:var(--rose);background:none;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;padding:0;font-weight:600}
 
 /* 지도 화면 */
 .cbadge{
@@ -222,6 +225,7 @@ footer a:hover{text-decoration:underline}
         </div>
       </div>
       <div class="chips fu fu2" id="chips"></div>
+      <div class="list-header fu fu2"><span id="list-label">📍 내 주변 골프장</span><button class="nearby-btn" onclick="showNearby()">📍 내 주변</button></div>
       <div class="results" id="results" style="display:none"></div>
     </div>
 
@@ -269,13 +273,11 @@ footer a:hover{text-decoration:underline}
     </div>
 
   </main>
+  <footer>
+    <p>© 2025 대전이문고 jennifer · PinPoint Golf GPS</p>
+    <p>지도 데이터 © <a href="https://map.kakao.com" target="_blank">Kakao Maps</a> · GPS 거리측정 웹앱</p>
+  </footer>
 </div>
-
-<!-- 카피라이트 -->
-<footer>
-  <p>© 2025 대전이문고 jennifer · PinPoint Golf GPS</p>
-  <p>지도 데이터 © <a href="https://map.kakao.com" target="_blank">Kakao Maps</a> · GPS 거리측정 웹앱</p>
-</footer>
 
 <div class="toast" id="toast"></div>
 
@@ -388,20 +390,23 @@ function setDot(s,t){
       b.classList.add('on');
       curRegion=(r==='전체'?null:r);
       document.getElementById('kw').value='';
-      showList(curRegion,null);
+      if(r==='전체') showNearby();
+      else showList(curRegion,null);
     };
     wrap.appendChild(b);
   });
-  showList(null,null);
+  showNearby();
 })();
 
 // DB 목록 표시 (지역 칩용)
 function showList(region,kw){
   const box=document.getElementById('results');
+  const label=document.getElementById('list-label');
   let list=[...DB];
   if(region)list=list.filter(c=>c.r===region);
   if(kw&&kw.trim())list=list.filter(c=>c.n.includes(kw.trim())||c.a.includes(kw.trim()));
   box.style.display='block';
+  if(label) label.textContent = region ? region+' 골프장' : '전체 골프장';
   if(!list.length){
     box.innerHTML='<div class="empty">검색 결과가 없어요.<br>다른 이름이나 지역으로 시도해보세요.</div>';
     return;
@@ -410,6 +415,39 @@ function showList(region,kw){
   box.innerHTML=list.map((c,i)=>
     '<div class="ri" onclick="pick('+i+')"><div class="rn">'+c.n+'</div><div class="ra">'+c.a+'</div></div>'
   ).join('');
+}
+
+// 위치 기반 가까운 골프장 5개 추천
+function showNearby(){
+  const box=document.getElementById('results');
+  const label=document.getElementById('list-label');
+  if(!navigator.geolocation){showList(null,null);return}
+  box.style.display='block';
+  box.innerHTML='<div class="empty">📡 내 위치 확인 중...</div>';
+  if(label) label.textContent='📍 내 주변 골프장';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude, lng=pos.coords.longitude;
+    // 거리 계산 후 정렬
+    const sorted=[...DB].map(c=>{
+      const d=hav(lat,lng,c.lat,c.lng);
+      return {...c,dist:d};
+    }).sort((a,b)=>a.dist-b.dist).slice(0,5);
+    box._d=sorted.map(c=>({n:c.n,a:c.a,lat:c.lat,lng:c.lng}));
+    box.innerHTML=sorted.map((c,i)=>
+      '<div class="ri" onclick="pick('+i+')">'
+      +'<div class="rn">'+c.n+'</div>'
+      +'<div class="ra">'+c.a+' · <span style="color:var(--rose);font-weight:600">'+distLabel(c.dist)+'</span></div>'
+      +'</div>'
+    ).join('');
+  }, ()=>{
+    // 위치 거부 시 기본 목록
+    if(label) label.textContent='전체 골프장';
+    showList(null,null);
+  },{enableHighAccuracy:false,timeout:8000});
+}
+
+function distLabel(m){
+  return m<1000 ? Math.round(m)+'m' : (m/1000).toFixed(1)+'km';
 }
 
 // 카카오 장소 검색 → 결과 목록 표시
